@@ -1,0 +1,26 @@
+{
+  "name": "cheque-check",
+  "mysql": "mysql://root:fallen1wingangle@localhost:3306/cheque-check",
+  "host": "localhost",
+  "domain": "http://dev-app.luxino.com",
+  "port": 20000,
+  "public": "../public/",
+  "debug": true,
+  "info": true,
+  "warn": true,
+  "error": true,
+  "prefix": "LXO",
+  "user": {
+    "paginate": {
+      "default": 10,
+      "max": 50
+    },
+    "authentication": {
+      "secret": "secret token string for authentication",
+      "expiresIn": "4h",
+      "first_party": {
+        "api_key": "first party app api key"
+      }
+    }
+  }
+}
