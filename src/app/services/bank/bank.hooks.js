@@ -11,6 +11,14 @@ const setActive = () => (context) => {
   sequelize.where = { is_active: 1 };
 };
 
+const setAttributesForGet = () => (context) => {
+  if (!context.params.sequelize) {
+    context.params.sequelize = {};
+  }
+  const { sequelize } = context.params;
+  sequelize.where = { ...sequelize.where, bank_id: context.id };
+};
+
 const setAttributes = () => (context) => {
   if (!context.params.sequelize) {
     context.params.sequelize = {};
@@ -156,7 +164,8 @@ export default {
       setAttributes()
     ],
     get: [
-      setActive()
+      setActive(),
+      setAttributesForGet()
     ],
     create: [
       setAttributesForCreate()
