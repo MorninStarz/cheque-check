@@ -16,22 +16,13 @@ const setAttributesForGet = () => (context) => {
     context.params.sequelize = {};
   }
   const { sequelize } = context.params;
-  sequelize.where = { ...sequelize.where, bank_id: context.id };
-};
-
-const setAttributes = () => (context) => {
-  if (!context.params.sequelize) {
-    context.params.sequelize = {};
-  }
-  const { sequelize } = context.params;
   sequelize.attributes = [
     'bank_id',
     'bank_name',
-    'create_date',
-    'update_date',
-    'is_active'
   ];
-  sequelize.order = [['create_date', 'DESC']];
+  sequelize.order = [['bank_name', 'ASC']];
+  sequelize.nest = true;
+  sequelize.raw = true;
 };
 
 const joinTableForGet = () => async (context) => {
@@ -54,6 +45,26 @@ const joinTableForGet = () => async (context) => {
       branches: [...branches]
     };
   }
+};
+
+const setAttributes = () => (context) => {
+  if (!context.params.sequelize) {
+    context.params.sequelize = {};
+  }
+  const { sequelize } = context.params;
+  sequelize.attributes = [
+    'bank_id',
+    'bank_name',
+    'create_date',
+    'update_date',
+    'is_active'
+  ];
+  if (context.params.query.bank_name) {
+    sequelize.where = { ...sequelize.where, bank_name: { [Op.like]: `%${context.params.query.bank_name}%` } };
+  }
+  sequelize.order = [['create_date', 'DESC']];
+  sequelize.raw = true;
+  sequelize.nest = true;
 };
 
 const setAttributesForCreate = () => (context) => {
@@ -130,7 +141,7 @@ const patchBranch = () => async (context) => {
         });
       });
       await branch.bulkCreate([...edit], {
-        updateOnDuplicate: ['branch_id', 'bank_id']
+        updateOnDuplicate: ['branch_id', 'branch_name', 'bank_id']
       });
     }
     if (!_.isEmpty(delete_branches)) {
@@ -164,7 +175,7 @@ export default {
       setAttributes()
     ],
     get: [
-      setActive(),
+      // setActive(),
       setAttributesForGet()
     ],
     create: [
