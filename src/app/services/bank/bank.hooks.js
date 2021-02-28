@@ -1,15 +1,9 @@
+/* eslint-disable no-await-in-loop */
+/* eslint-disable no-restricted-syntax */
 import { GeneralError } from '@feathersjs/errors';
 import { disallow } from 'feathers-hooks-common';
 import _ from 'lodash';
 import { Op } from 'sequelize';
-
-const setActive = () => (context) => {
-  if (!context.params.sequelize) {
-    context.params.sequelize = {};
-  }
-  const { sequelize } = context.params;
-  sequelize.where = { is_active: 1 };
-};
 
 const setAttributesForGet = () => (context) => {
   if (!context.params.sequelize) {
@@ -19,10 +13,12 @@ const setAttributesForGet = () => (context) => {
   sequelize.attributes = [
     'bank_id',
     'bank_name',
+    'create_by',
+    'update_by'
   ];
+  sequelize.where = { is_active: 1 };
   sequelize.order = [['bank_name', 'ASC']];
   sequelize.nest = true;
-  sequelize.raw = true;
 };
 
 const joinTableForGet = () => async (context) => {
@@ -56,15 +52,17 @@ const setAttributes = () => (context) => {
     'bank_id',
     'bank_name',
     'create_date',
-    'update_date',
-    'is_active'
+    'create_by',
+    'update_by'
   ];
-  if (context.params.query.bank_name) {
-    sequelize.where = { ...sequelize.where, bank_name: { [Op.like]: `%${context.params.query.bank_name}%` } };
-  }
+  sequelize.where = { is_active: 1 };
   sequelize.order = [['create_date', 'DESC']];
-  sequelize.raw = true;
   sequelize.nest = true;
+  sequelize.raw = true;
+  const { bank_name } = context.params.query;
+  if (bank_name) {
+    sequelize.where = { ...sequelize.where, bank_name: { [Op.like]: `%${bank_name}%` } };
+  }
 };
 
 const setAttributesForCreate = () => (context) => {
@@ -167,15 +165,60 @@ const patchBranch = () => async (context) => {
   }
 };
 
+const setResult = () => async (context) => {
+  try {
+    const associateModel = context.app.get('sequelizeClient').models;
+    const {
+      branch,
+      user
+    } = associateModel;
+    const res = [];
+    for (const e of context.result.data) {
+      let where = { is_active: 1, bank_id: { [Op.like]: `%${e.bank_id}%` } };
+      if (context.params.query.branch_name) where = { ...where, branch_name: { [Op.like]: `%${context.params.query.branch_name}%` } };
+      const branches = await branch.findAll({
+        attributes: [
+          'branch_id',
+          'branch_name'
+        ],
+        where: where
+      });
+      const user_create = await user.findByPk(e.create_by, {
+        attributes: [
+          'username'
+        ],
+      });
+      let user_update;
+      if (e.update_by) {
+        user_update = await user.findByPk(e.update_by, {
+          attributes: [
+            'username'
+          ]
+        });
+      }
+      if (branches && branches.length > 0) {
+        res.push({
+          bank_id: e.bank_id,
+          bank_name: e.bank_name,
+          branch: branches,
+          create_by: user_create.username,
+          update_by: user_update ? user_update.username : ''
+        });
+      }
+    }
+    context.result.data = res;
+  } catch (e) {
+    throw new GeneralError(e);
+  }
+};
+
 export default {
   before: {
     all: [],
     find: [
-      setActive(),
       setAttributes()
     ],
     get: [
-      // setActive(),
       setAttributesForGet()
     ],
     create: [
@@ -192,7 +235,9 @@ export default {
 
   after: {
     all: [],
-    find: [],
+    find: [
+      setResult()
+    ],
     get: [
       joinTableForGet()
     ],

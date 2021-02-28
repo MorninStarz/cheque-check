@@ -49,6 +49,8 @@ export default function (app) {
       permission
     } = models;
     user.belongsTo(permission, { foreignKey: 'permission_id' });
+    user.belongsTo(user, { foreignKey: 'create_by' });
+    user.belongsTo(user, { foreignKey: 'update_by' });
   };
 
   return user;

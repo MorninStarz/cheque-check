@@ -42,14 +42,10 @@ export default function (app) {
   branch.associate = function (models) {
     const {
       bank,
-      cheque,
-      account,
-      transfer
+      cheque
     } = models;
-    branch.belongsTo(bank, { foreignKey: 'bank_id' });
     branch.hasMany(cheque, { foreignKey: 'branch_id' });
-    branch.hasMany(account, { foreignKey: 'branch_id' });
-    branch.hasMany(transfer, { foreignKey: 'branch_id' });
+    branch.belongsTo(bank, { foreignKey: 'bank_id' });
   };
 
   return branch;

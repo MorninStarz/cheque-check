@@ -40,13 +40,12 @@ export default function (app) {
     const {
       branch,
       cheque,
-      account,
-      transfer
+      user
     } = models;
     bank.hasMany(branch, { foreignKey: 'bank_id' });
     bank.hasMany(cheque, { foreignKey: 'bank_id' });
-    bank.hasMany(account, { foreignKey: 'bank_id' });
-    bank.hasMany(transfer, { foreignKey: 'bank_id' });
+    bank.belongsTo(user, { foreignKey: 'create_by' });
+    bank.belongsTo(user, { foreignKey: 'update_by' });
   };
 
   return bank;

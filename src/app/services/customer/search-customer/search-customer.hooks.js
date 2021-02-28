@@ -1,17 +1,14 @@
+/* eslint-disable no-await-in-loop */
+/* eslint-disable no-restricted-syntax */
 import { disallow } from 'feathers-hooks-common';
 import { GeneralError } from '@feathersjs/errors';
 import _ from 'lodash';
 import { Op } from 'sequelize';
-import moment from 'moment';
 
 const joinTableForFind = () => async (context) => {
   const {
     name,
-    lastname,
-    mobile,
-    account_no,
-    start_date,
-    end_date
+    customer_id
   } = _.get(context, 'params.query');
   try {
     if (!context.params.sequelize) {
@@ -21,37 +18,19 @@ const joinTableForFind = () => async (context) => {
     sequelize.attributes = [
       'customer_id',
       'name',
-      'lastname',
-      'mobile',
-      'account_no',
       'expect_amount',
       'actual_amount',
-      'due_date',
-      'create_date',
       'create_by',
-      'update_date',
       'update_by'
     ];
-    sequelize.raw = false;
     sequelize.nest = true;
     sequelize.where = { is_active: 1 };
-    if (start_date) {
-      const st = moment(start_date);
-      let dateBtw;
-      if (end_date) {
-        const en = moment(end_date);
-        if (st.isAfter(en)) throw new GeneralError('Invalid date !');
-        dateBtw = { [Op.gte]: moment(st, 'YYYY-MM-DD 00:00:00'), [Op.lt]: moment(en, 'YYYY-MM-DD 00:00:00').add(1, 'day') };
-        delete context.params.query.start_date;
-        delete context.params.query.end_date;
-      } else {
-        dateBtw = { [Op.gte]: moment(start_date, 'YYYY-MM-DD 00:00:00') };
-        delete context.params.query.start_date;
-      }
-      sequelize.where = { ...sequelize.where, due_date: dateBtw };
-    } else if (end_date) {
-      sequelize.where = { ...sequelize.where, due_date: { [Op.lt]: moment(end_date, 'YYYY-MM-DD').add(1, 'day') } };
-      delete context.params.query.end_date;
+    if (customer_id) {
+      sequelize.where = {
+        ...sequelize.where,
+        customer_id: customer_id
+      };
+      delete context.params.query.customer_id;
     }
     if (name) {
       sequelize.where = {
@@ -60,29 +39,44 @@ const joinTableForFind = () => async (context) => {
       };
       delete context.params.query.name;
     }
-    if (lastname) {
-      sequelize.where = {
-        ...sequelize.where,
-        lastname: { [Op.like]: `%${lastname}%` }
-      };
-      delete context.params.query.lastname;
-    }
-    if (mobile) {
-      sequelize.where = {
-        ...sequelize.where,
-        mobile: { [Op.like]: `%${mobile}%` }
-      };
-      delete context.params.query.mobile;
-    }
-    if (account_no) {
-      sequelize.where = {
-        ...sequelize.where,
-        account_no: { [Op.like]: `%${account_no}%` }
-      };
-      delete context.params.query.account_no;
-    }
-    sequelize.order = [['due_date', 'DESC']];
+    sequelize.order = [['name', 'DESC']];
     return context;
+  } catch (error) {
+    throw new GeneralError(error);
+  }
+};
+
+const setResult = () => async (context) => {
+  const associateModel = context.app.get('sequelizeClient').models;
+  const {
+    user
+  } = associateModel;
+  try {
+    const res = [];
+    for (const e of context.result.data) {
+      const user_create = await user.findByPk(e.create_by, {
+        attributes: [
+          'username'
+        ],
+      });
+      let user_update;
+      if (e.update_by) {
+        user_update = await user.findByPk(e.update_by, {
+          attributes: [
+            'username'
+          ]
+        });
+      }
+      res.push({
+        customer_id: e.customer_id,
+        name: e.name,
+        expect_amount: e.expect_amount,
+        actual_amount: e.actual_amount,
+        create_by: user_create.username,
+        update_by: user_update ? user_update.username : ''
+      });
+    }
+    context.result.data = res;
   } catch (error) {
     throw new GeneralError(error);
   }
@@ -113,7 +107,9 @@ export default {
 
   after: {
     all: [],
-    find: [],
+    find: [
+      setResult()
+    ],
     get: [],
     create: [],
     update: [],

@@ -22,10 +22,6 @@ export default function (app) {
       type: DataTypes.UUID,
       allowNull: true,
     },
-    account_id: {
-      type: DataTypes.UUID,
-      allowNull: true,
-    },
     customer_id: {
       type: DataTypes.UUID,
       allowNull: false,
@@ -71,14 +67,12 @@ export default function (app) {
   transaction.associate = function (models) {
     const {
       cheque,
-      customer,
-      account,
-      transfer
+      transfer,
+      customer
     } = models;
     transaction.belongsTo(cheque, { foreignKey: 'cheque_id' });
-    transaction.belongsTo(transfer, { foreignKey: 'transfer_id' });
     transaction.belongsTo(customer, { foreignKey: 'customer_id' });
-    transaction.belongsTo(account, { foreignKey: 'account_id' });
+    transaction.belongsTo(transfer, { foreignKey: 'transfer_id' });
   };
 
   return transaction;

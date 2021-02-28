@@ -47,6 +47,10 @@ export default function (app) {
       type: DataTypes.DATE,
       allowNull: true
     },
+    pass_date: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     create_by: {
       type: DataTypes.UUID,
       allowNull: false
@@ -56,7 +60,7 @@ export default function (app) {
       allowNull: true
     },
     status: {
-      type: DataTypes.ENUM('Waiting', 'Pending', 'Approved'),
+      type: DataTypes.ENUM('Pending', 'Approved', 'Pass'),
       allowNull: false
     },
     is_active: {

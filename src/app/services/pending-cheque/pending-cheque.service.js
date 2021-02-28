@@ -1,9 +1,9 @@
 // Initializes the `users` service on path `/users`
 import config from 'config';
-import hooks from './account.hooks';
-import createModel from '../../models/account.model';
+import hooks from './pending-cheque.hooks';
+import createModel from '../../models/cheque.model';
 
-const { Account } = require('./account.class');
+const { PendingCheque } = require('./pending-cheque.class');
 
 export default function (app) {
   const options = {
@@ -13,9 +13,9 @@ export default function (app) {
   };
 
   // Initialize our service with any options it requires
-  app.use('account', new Account(options, app));
+  app.use('pending-cheque', new PendingCheque(options, app));
 
   // Get our initialized service so that we can register hooks
-  const service = app.service('account');
+  const service = app.service('pending-cheque');
   service.hooks(hooks);
 }

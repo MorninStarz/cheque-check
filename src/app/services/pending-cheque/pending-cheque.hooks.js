@@ -3,14 +3,6 @@ import _ from 'lodash';
 import moment from 'moment';
 import { Op } from 'sequelize';
 
-const setActive = () => (context) => {
-  if (!context.params.sequelize) {
-    context.params.sequelize = {};
-  }
-  const { sequelize } = context.params;
-  sequelize.where = { is_active: 1 };
-};
-
 const dateTimeCondition = (from, to) => {
   let dateBtw;
   const format = 'YYYY-MM-DD 00:00:00.000';
@@ -33,14 +25,13 @@ const setAttributes = () => (context) => {
     'cheque_no',
     'month',
     'amount',
-    'remark',
     'pending_date',
     'approve_date',
-    'create_date',
-    'update_date',
-    'create_by',
-    'status'
+    'pass_date',
+    'status',
+    'remark'
   ];
+  sequelize.where = { is_active: 1 };
   const associateModel = context.app.get('sequelizeClient').models;
   const {
     customer,
@@ -52,8 +43,7 @@ const setAttributes = () => (context) => {
     {
       model: customer,
       attributes: [
-        'name',
-        'lastname'
+        'name'
       ],
       where: { is_active: 1 }
     },
@@ -79,10 +69,7 @@ const setAttributes = () => (context) => {
     branch_id,
     pending_date_from,
     pending_date_to,
-    approve_date_from,
-    approve_date_to,
-    amount,
-    status
+    amount
   } = context.params.query;
   if (cheque_no) sequelize.where = { ...sequelize.where, cheque_no: { [Op.like]: `%${cheque_no}%` } };
   if (customer_id) {
@@ -96,10 +83,7 @@ const setAttributes = () => (context) => {
   }
   const pending_date = dateTimeCondition(pending_date_from, pending_date_to);
   if (pending_date) sequelize.where = { ...sequelize.where, pending_date: pending_date };
-  const approve_date = dateTimeCondition(approve_date_from, approve_date_to);
-  if (approve_date) sequelize.where = { ...sequelize.where, approve_date: approve_date };
   if (amount) sequelize.where = { ...sequelize.where, amount: { [Op.like]: `%${amount}%` } };
-  if (status) sequelize.where = { ...sequelize.where, status: status };
 };
 
 const setCreateBy = () => (context) => {
@@ -108,6 +92,7 @@ const setCreateBy = () => (context) => {
   if (!req.month) delete context.data.month;
   if (!req.pending_date) delete context.data.pending_date;
   if (!req.approve_date) delete context.data.approve_date;
+  context.data.status = 'Pending';
   context.data.create_by = user_id;
   if (!context.params.sequelize) {
     context.params.sequelize = {};
@@ -116,27 +101,14 @@ const setCreateBy = () => (context) => {
   sequelize.nest = true;
 };
 
-const checkStatus = () => async (context) => {
-  const status = _.get(context, 'data.status');
-  if (!status) return context;
-  if (status === 'Approved') {
-    const customer_id = _.get(context, 'data.customer_id');
-    const amount = _.get(context, 'data.amount');
-    const associateModel = context.app.get('sequelizeClient').models;
-    const {
-      customer
-    } = associateModel;
-    const customerFind = await customer.findByPk(customer_id);
-    if (!_.isEmpty(customerFind)) {
-      const currentActual = _.get(customerFind, 'actual_amount');
-      await customer.update({
-        actual_amount: (+currentActual) + (+amount)
-      }, {
-        where: { customer_id: customer_id }
-      });
-    }
-  }
-  return context;
+const adjustCustomerAmount = () => async (context) => {
+  const associateModel = context.app.get('sequelizeClient').models;
+  const {
+    customer
+  } = associateModel;
+  const findCustomer = await customer.findByPk(context.result.customer_id);
+  findCustomer.expect_amount = +findCustomer.expect_amount + (+context.result.amount);
+  findCustomer.save();
 };
 
 const logTransaction = (type = 'create') => async (context) => {
@@ -161,12 +133,9 @@ export default {
   before: {
     all: [],
     find: [
-      setActive(),
       setAttributes()
     ],
-    get: [
-      setActive()
-    ],
+    get: [],
     create: [
       setCreateBy()
     ],
@@ -185,11 +154,11 @@ export default {
     find: [],
     get: [],
     create: [
+      adjustCustomerAmount(),
       logTransaction()
     ],
     update: [],
     patch: [
-      checkStatus(),
       logTransaction('update')
     ],
     remove: [

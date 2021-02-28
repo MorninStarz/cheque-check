@@ -9,8 +9,7 @@ const setAttributes = () => async (context) => {
   const res = await customer.findAll({
     attributes: [
       'customer_id',
-      'name',
-      'lastname'
+      'name'
     ],
     where: { is_active: 1 },
     order: [['name', 'ASC']]

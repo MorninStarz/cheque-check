@@ -14,14 +14,6 @@ export default function (app) {
       type: DataTypes.STRING(255),
       allowNull: false,
     },
-    lastname: {
-      type: DataTypes.STRING(255),
-      allowNull: true
-    },
-    mobile: {
-      type: DataTypes.STRING(255),
-      allowNull: true
-    },
     expect_amount: {
       type: DataTypes.DECIMAL(18, 2),
       defaultValue: 0
@@ -59,13 +51,14 @@ export default function (app) {
     const {
       cheque,
       transaction,
-      account,
-      transfer
+      transfer,
+      user
     } = models;
     customer.hasMany(cheque, { foreignKey: 'customer_id' });
     customer.hasMany(transfer, { foreignKey: 'customer_id' });
     customer.hasMany(transaction, { foreignKey: 'customer_id' });
-    customer.hasMany(account, { foreignKey: 'customer_id' });
+    customer.belongsTo(user, { foreignKey: 'create_by' });
+    customer.belongsTo(user, { foreignKey: 'update_by' });
   };
 
   return customer;

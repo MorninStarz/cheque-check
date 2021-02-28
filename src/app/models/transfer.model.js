@@ -10,25 +10,13 @@ export default function (app) {
       primaryKey: true,
       defaultValue: DataTypes.UUIDV4
     },
-    account_id: {
-      type: DataTypes.UUID,
-      allowNull: false
-    },
     customer_id: {
       type: DataTypes.UUID,
-      allowNull: false
-    },
-    bank_id: {
-      type: DataTypes.UUID,
-      allowNull: false
-    },
-    branch_id: {
-      type: DataTypes.UUID,
-      allowNull: false
+      allowNull: false,
     },
     amount: {
       type: DataTypes.DECIMAL(18, 2),
-      allowNull: false
+      allowNull: false,
     },
     transfer_date: {
       type: DataTypes.DATE,
@@ -36,7 +24,7 @@ export default function (app) {
     },
     create_by: {
       type: DataTypes.UUID,
-      allowNull: true
+      allowNull: false
     },
     update_by: {
       type: DataTypes.UUID,
@@ -58,15 +46,12 @@ export default function (app) {
   transfer.associate = function (models) {
     const {
       customer,
-      account,
-      bank,
-      branch,
+      user,
       transaction
     } = models;
-    transfer.belongsTo(account, { foreignKey: 'account_id' });
     transfer.belongsTo(customer, { foreignKey: 'customer_id' });
-    transfer.belongsTo(bank, { foreignKey: 'bank_id' });
-    transfer.belongsTo(branch, { foreignKey: 'branch_id' });
+    transfer.belongsTo(user, { foreignKey: 'create_by' });
+    transfer.belongsTo(user, { foreignKey: 'update_by' });
     transfer.hasMany(transaction, { foreignKey: 'transfer_id' });
   };
 
